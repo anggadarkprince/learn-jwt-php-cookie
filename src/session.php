@@ -59,6 +59,7 @@ class SessionManager
                 ];
 
                 $jwt = JWT::encode($payload, SessionManager::SECRET_KEY, 'HS256');
+                $_SESSION['X-APP-SESSION'] = $jwt; // emulate return of jwt
                 setcookie("X-APP-SESSION", $jwt, time() + 3600, "/", "localhost", true, true);
 
                 return true;
@@ -66,6 +67,33 @@ class SessionManager
         }
 
         return false;
+    }
+
+    private static function getAuthorizationHeader()
+    {
+        $headers = null;
+        if (isset($_SERVER['Authorization'])) {
+            $headers = trim($_SERVER["Authorization"]);
+        } else if (isset($_SERVER['HTTP_AUTHORIZATION'])) { // Nginx or fast CGI
+            $headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
+        } elseif (function_exists('apache_request_headers')) { // Apache
+            $requestHeaders = apache_request_headers();
+            $requestHeaders = array_combine(array_map('ucwords', array_keys($requestHeaders)), array_values($requestHeaders));
+            if (isset($requestHeaders['Authorization'])) {
+                $headers = trim($requestHeaders['Authorization']);
+            }
+        }
+        return $headers;
+    }
+
+    private static function getBearerToken() {
+        $headers = self::getAuthorizationHeader();
+        if (!empty($headers)) {
+            if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
+                return $matches[1];
+            }
+        }
+        return null;
     }
 
     /**
@@ -76,8 +104,8 @@ class SessionManager
      */
     public static function getCurrentSession(): Session
     {
-        if (isset($_COOKIE['X-APP-SESSION'])) {
-            $jwt = $_COOKIE['X-APP-SESSION'];
+        $jwt = self::getBearerToken() ?? $_COOKIE['X-APP-SESSION'] ?? '';
+        if (!empty($jwt)) {
             try {
                 $payload = JWT::decode($jwt, SessionManager::SECRET_KEY, ['HS256']);
                 return new Session($payload->username, $payload->role);
