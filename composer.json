@@ -1,0 +1,14 @@
+{
+    "name": "anggadarkprince/learn-jwt-php-cookie",
+    "description": "Learn jwt php with cookie",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Angga Ari Wijaya",
+            "email": "anggadarkprince@gmail.com"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^5.2"
+    }
+}
